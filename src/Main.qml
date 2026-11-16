@@ -32,13 +32,16 @@ ApplicationWindow {
     readonly property color screenLine: alphaMix(screenInk, screen, .84)
     readonly property color screenLineStrong: alphaMix(screenInk, screen, .56)
     readonly property color readout: alphaMix(accent, Qt.rgba(.937, .965, .875, 1), .27)
-    readonly property color good: "#c3e8a6"
+    // The meter screen stays dark, so lift a dim theme green until it reads clearly.
+    readonly property color good: luminance(palette.link) < .3 ? Qt.lighter(palette.link, 1.55) : palette.link
     readonly property bool compact: height < 680 || width < 870
     readonly property bool stacked: width < 740
     readonly property bool motion: preferences.animateStrobe
     readonly property int stringsTuned: tuner.strings.filter((item, i) => tuner.tunedMask & (1 << i)).length
     readonly property string status: {
         if (tuner.offTarget) return tuner.target >= 0 ? qsTr("Pluck the selected string") : qsTr("Pluck one open string")
+        if (tuner.held) return tuner.inTune ? qsTr("In tune · pluck the next string")
+                             : tuner.cents < 0 ? qsTr("Tighten, then pluck again") : qsTr("Loosen, then pluck again")
         if (tuner.inTune) return qsTr("In tune")
         if (Math.abs(tuner.cents) <= 2) return qsTr("Let the note ring")
         return tuner.cents < 0 ? qsTr("Flat · tune up") : qsTr("Sharp · tune down")

@@ -12,6 +12,10 @@ Direction cues wait for stable pitch, use a cooldown, and rearm after a fresh pl
 
 The three-tone speaker check measures its received signal at known frequencies. It checks agreement across the local audio path. Measuring absolute clock accuracy requires an independent reference. In automatic operation, microphone capture resumes when a usable input becomes available.
 
+## Holding the last reading
+
+When a string decays, a cue finishes, or the detector sees only unstable candidates, the engine marks the last open-string reading as held instead of clearing it. A new stable pitch replaces it without smoothing from the old value. In Auto, a reading that matches no string and sits a whole number of octaves from the held string is treated as that string fading, because weak tails often slip an octave. Mic loss, preset changes, and target changes still clear the display. The stall timer starts after the playback guard, so an empty read right after a cue is not mistaken for a lost microphone.
+
 ## Verification
 
 - The Rust suite covers 1,260 harmonic-rich plucks across seven sample rates. The worst error on that synthetic set was 0.52 cents.

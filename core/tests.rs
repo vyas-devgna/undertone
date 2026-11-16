@@ -301,6 +301,51 @@ fn does_not_confirm_discontinuous_pitch_or_hold_a_stale_reading() {
     assert!(!engine.view().in_tune);
 }
 
+#[test]
+fn holds_the_last_string_until_the_next_pluck() {
+    let mut engine = new_engine(0, 440);
+    engine.configure_input(MONO);
+    let mut now = 0;
+    let flat = engine.string_hz(1) * 0.98;
+    feed(&mut engine, &mut now, flat, 9600);
+    let cents = engine.view().cents;
+    assert!(cents < -20.);
+    assert_eq!(engine.playback().cue, Cue::Raise);
+    // The cue plays and drains while the microphone keeps delivering silence.
+    let silence = vec![0_u8; 1200 * size_of::<f32>()];
+    engine.output_started(now);
+    for _ in 0..8 {
+        now += 25;
+        engine.tick(now, &silence, OutputState::Active);
+    }
+    now += 25;
+    engine.tick(now, &silence, OutputState::Drained);
+    assert_eq!(engine.playback().cue, Cue::Off);
+    assert!(engine.view().held);
+    // An empty audio read right after the guard is not a lost microphone.
+    now += 150;
+    engine.tick(now, &[], OutputState::Active);
+    assert!(engine.view().held);
+    for _ in 0..20 {
+        now += 25;
+        engine.tick(now, &silence, OutputState::Active);
+    }
+    assert!(engine.view().held);
+    assert_eq!(engine.view().active_string, 1);
+    assert_eq!(engine.view().cents, cents);
+
+    // An octave slip while the string fades must not replace it.
+    let octave = engine.string_hz(1) * 0.98 * 4.;
+    feed(&mut engine, &mut now, octave, 9600);
+    assert!(engine.view().held);
+    assert_eq!(engine.view().active_string, 1);
+
+    let next = engine.string_hz(3);
+    feed(&mut engine, &mut now, next, 9600);
+    assert!(!engine.view().held);
+    assert_eq!(engine.view().active_string, 3);
+}
+
 fn exercise_check(engine: &mut Engine, now: &mut u64, missing: Option<usize>, offset: f64) {
     engine.check_audio();
     for index in 0..3 {

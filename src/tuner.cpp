@@ -255,7 +255,7 @@ void Tuner::sync() {
     if (old.hz != m_view.hz || old.cents != m_view.cents || old.level != m_view.level ||
         old.note != m_view.note || old.active_string != m_view.active_string ||
         old.tuned_mask != m_view.tuned_mask || old.in_tune != m_view.in_tune ||
-        old.off_target != m_view.off_target)
+        old.off_target != m_view.off_target || old.held != m_view.held)
         emit readingChanged();
     if (old.notice != m_view.notice || old.check_index != m_view.check_index ||
         old.check_serial != m_view.check_serial || wasPlaying != playing()) {

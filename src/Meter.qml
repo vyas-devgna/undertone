@@ -18,6 +18,15 @@ Item {
     }
     property real amount: hasPitch ? Math.max(-50, Math.min(50, tuner.cents)) : 0
     property real phase: 0
+    // While a reading is held, the needle breathes so it reads as the last pluck, not a live one.
+    property real pulse: 1
+    SequentialAnimation on pulse {
+        running: meter.motion && tuner.held
+        loops: Animation.Infinite
+        onStopped: meter.pulse = 1
+        NumberAnimation { to: .35; duration: 700; easing.type: Easing.InOutSine }
+        NumberAnimation { to: 1; duration: 700; easing.type: Easing.InOutSine }
+    }
 
     Behavior on amount {
         enabled: meter.motion && meter.hasPitch
@@ -28,6 +37,7 @@ Item {
     onHasPitchChanged: scale.requestPaint()
     onSignalChanged: scale.requestPaint()
     onPhaseChanged: scale.requestPaint()
+    onPulseChanged: scale.requestPaint()
     onSettledChanged: scale.requestPaint()
     onDisplayedNoteChanged: if (meter.motion && displayedNote.length) noteEntrance.restart()
 
@@ -45,6 +55,13 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: window.compact ? 112 : Math.min(238, meter.height * .50)
 
+            Item {
+                anchors.fill: parent
+                opacity: tuner.held ? .55 : 1
+                Behavior on opacity {
+                    enabled: meter.motion
+                    NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
+                }
             Row {
                 id: noteReadout
                 anchors.centerIn: parent
@@ -78,6 +95,7 @@ Item {
                     font.pixelSize: window.compact ? 32 : 52
                     anchors.baseline: note.baseline
                 }
+            }
             }
             Column {
                 anchors.centerIn: parent
@@ -168,7 +186,7 @@ Item {
                     }
                     if (meter.hasPitch) {
                         const x = Math.min(width - 3, (active + .5) * step - 1)
-                        ctx.fillStyle = meter.signal
+                        ctx.fillStyle = window.alpha(meter.signal, tuner.held ? meter.pulse : 1)
                         ctx.fillRect(Math.round(x), 0, 2, height)
                     }
                 }

@@ -34,6 +34,7 @@ class Tuner : public QObject {
     Q_PROPERTY(int tunedMask READ tunedMask NOTIFY readingChanged)
     Q_PROPERTY(bool inTune READ inTune NOTIFY readingChanged)
     Q_PROPERTY(bool offTarget READ offTarget NOTIFY readingChanged)
+    Q_PROPERTY(bool held READ held NOTIFY readingChanged)
     Q_PROPERTY(bool soundFeedback READ soundFeedback WRITE setSoundFeedback NOTIFY soundFeedbackChanged)
     Q_PROPERTY(bool playing READ playing NOTIFY playbackChanged)
     Q_PROPERTY(bool checking READ checking NOTIFY playbackChanged)
@@ -59,6 +60,7 @@ public:
     int tunedMask() const { return m_view.tuned_mask; }
     bool inTune() const { return m_view.in_tune; }
     bool offTarget() const { return m_view.off_target; }
+    bool held() const { return m_view.held; }
     bool soundFeedback() const { return m_soundFeedback; }
     bool playing() const { return m_currentCue == undertone::Cue::Reference || m_currentCue == undertone::Cue::Check; }
     bool checking() const { return m_view.check_index >= 0; }

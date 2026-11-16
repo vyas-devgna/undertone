@@ -76,6 +76,7 @@ pub mod ffi {
         tuned_mask: i32,
         in_tune: bool,
         off_target: bool,
+        held: bool,
         check_index: i32,
         notice: Notice,
         check_serial: u64,
@@ -149,6 +150,7 @@ fn new_engine(preset: i32, reference: i32) -> Box<Engine> {
             tuned_mask: 0,
             in_tune: false,
             off_target: false,
+            held: false,
             check_index: -1,
             notice: Notice::Clear,
             check_serial: 0,
@@ -283,6 +285,7 @@ impl Engine {
         self.view.cents = 0.;
         self.view.in_tune = false;
         self.view.off_target = false;
+        self.view.held = false;
         self.candidate_frames = 0;
         self.candidate_hz = 0.;
         self.tune_frames = 0;
@@ -336,6 +339,10 @@ impl Engine {
     }
 
     fn request_output(&mut self, cue: Cue, hz: f64, duration_ms: u32) {
+        // A cue ends while its string may still ring: drop the captured audio, keep the reading.
+        let keep = (cue == Cue::Off && is_feedback(self.playback.cue))
+            .then_some(self.view)
+            .filter(|view| view.hz > 0. && !view.off_target);
         self.playback = Playback {
             serial: self.playback.serial + 1,
             cue,
@@ -345,6 +352,13 @@ impl Engine {
         self.started_at = None;
         if !is_feedback(cue) {
             self.clear_reading();
+        }
+        if let Some(view) = keep {
+            self.view = View {
+                held: true,
+                level: 0.,
+                ..view
+            };
         }
     }
 
@@ -400,12 +414,16 @@ impl Engine {
         if self.now_ms < self.quiet_until {
             return;
         }
+        // Input is ignored during playback and its guard, so that time is not a stall.
         if let Some(input) = &mut self.input {
             if input.push(bytes, None) {
                 self.last_input = self.now_ms;
                 let reading = input.detect();
                 self.update_reading(reading);
-            } else if self.now_ms.saturating_sub(self.last_input) >= 175
+            } else if self
+                .now_ms
+                .saturating_sub(self.last_input.max(self.quiet_until))
+                >= 175
                 && (self.view.hz > 0. || self.view.level > 0. || self.candidate_frames > 0)
             {
                 self.clear_reading();
@@ -484,9 +502,25 @@ impl Engine {
             self.tune_frames = 0;
             self.detuned_frames = 0;
             if self.now_ms.saturating_sub(self.last_signal) >= 175 {
-                self.clear_signal();
+                // Keep the last string on screen while the player turns the peg.
+                if self.view.hz > 0. && !self.view.off_target {
+                    self.view.held = true;
+                } else {
+                    self.clear_signal();
+                }
             }
             return;
+        }
+        // A fading string often slips an octave to a pitch no string matches; keep the string.
+        if self.view.target == -1
+            && self.view.hz > 0.
+            && !self.view.off_target
+            && nearest_string(hz, &self.targets, 400.).is_none()
+        {
+            let octaves = cents(hz, self.view.hz) / 1200.;
+            if octaves.abs() > 0.5 && (octaves - octaves.round()).abs() < 0.05 {
+                return self.update_reading(Reading { hz: 0., rms });
+            }
         }
         if self.candidate_hz <= 0. || cents(hz, self.candidate_hz).abs() > 55. {
             self.direction.interrupt();
@@ -497,15 +531,20 @@ impl Engine {
         self.candidate_hz = hz;
         if self.candidate_frames < 2 {
             self.candidate_frames += 1;
-            // A stream of unstable candidates must not leave the last note on the meter.
-            if self.now_ms.saturating_sub(self.last_signal) >= 175 {
-                self.view.hz = 0.;
-                self.view.in_tune = false;
-                self.view.off_target = false;
+            // Unstable candidates must not pass the last note off as live: mark it held.
+            if !self.view.held && self.now_ms.saturating_sub(self.last_signal) >= 175 {
+                if self.view.hz > 0. && !self.view.off_target {
+                    self.view.held = true;
+                } else {
+                    self.view.hz = 0.;
+                    self.view.in_tune = false;
+                    self.view.off_target = false;
+                }
             }
             return;
         }
         self.last_signal = self.now_ms;
+        let fresh = std::mem::take(&mut self.view.held);
 
         let matched = match self.view.target {
             -2 => None,
@@ -520,7 +559,11 @@ impl Engine {
         let detected = nearest_note(hz, self.view.reference);
         let note = target_note.unwrap_or(detected);
         let off_target = target_note.is_none() && !chromatic;
-        if self.view.hz > 0. && note == self.view.note && cents(hz, self.view.hz).abs() < 40. {
+        if !fresh
+            && self.view.hz > 0.
+            && note == self.view.note
+            && cents(hz, self.view.hz).abs() < 40.
+        {
             self.view.hz += 0.4 * (hz - self.view.hz);
         } else {
             self.view.hz = hz;
