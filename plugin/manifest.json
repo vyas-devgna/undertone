@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "local.undertone",
+  "name": "Undertone",
+  "version": "1.0.0",
+  "description": "Open the Undertone acoustic guitar tuner.",
+  "kinds": ["bar-widget"],
+  "entryPoints": { "barWidget": "TunerWidget.qml" },
+  "barWidget": {
+    "displayName": "Undertone",
+    "description": "Launch the fullscreen acoustic guitar tuner.",
+    "category": "Media",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}

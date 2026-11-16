@@ -7,3 +7,20 @@ data_dir="${XDG_DATA_HOME:-$HOME/.local/share}"
 install -Dm755 build/undertone "$HOME/.local/bin/undertone"
 install -Dm644 undertone.desktop "$data_dir/applications/undertone.desktop"
 install -Dm644 undertone.svg "$data_dir/icons/hicolor/scalable/apps/undertone.svg"
+
+# On Omarchy, also add the launcher to the bar. Other desktops stop here.
+command -v omarchy >/dev/null || exit 0
+plugin_dir="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/local.undertone"
+omarchy plugin validate "$PWD/plugin"
+install -CDm644 plugin/manifest.json "$plugin_dir/manifest.json"
+install -CDm644 plugin/TunerWidget.qml "$plugin_dir/TunerWidget.qml"
+install -CDm644 plugin/i18n/en.json "$plugin_dir/i18n/en.json"
+
+known_plugin() {
+    omarchy-shell shell listPlugins | jq -e 'any(.[]; .id == "local.undertone")' >/dev/null
+}
+if ! known_plugin; then
+    omarchy-shell shell rescanPlugins
+    for _ in {1..24}; do known_plugin && break; sleep .12; done
+fi
+omarchy bar put local.undertone --section right

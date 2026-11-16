@@ -19,6 +19,8 @@ static void followOmarchyTheme(QTimer &poll) {
     fallback.setColor(QPalette::Accent, QColor("#7daea3"));
     fallback.setColor(QPalette::Window, QColor("#282828"));
     fallback.setColor(QPalette::WindowText, QColor("#d4be98"));
+    // QPalette has no success role; Link carries the theme's green for the in-tune state.
+    fallback.setColor(QPalette::Link, QColor("#a9b665"));
     QGuiApplication::setPalette(fallback);
 
     const auto state = qEnvironmentVariableIsEmpty("XDG_STATE_HOME")
@@ -32,13 +34,14 @@ static void followOmarchyTheme(QTimer &poll) {
         QFile file(path);
         if (file.open(QIODevice::ReadOnly)) {
             static const QRegularExpression color(
-                R"re(^\s*(accent|background|foreground)\s*=\s*"(#[0-9a-fA-F]{6})")re",
+                R"re(^\s*(accent|background|foreground|green)\s*=\s*"(#[0-9a-fA-F]{6})")re",
                 QRegularExpression::MultilineOption);
             auto values = color.globalMatch(QString::fromUtf8(file.read(8192)));
             while (values.hasNext()) {
                 const auto match = values.next();
                 const auto key = match.captured(1);
                 const auto role = key == "accent" ? QPalette::Accent
+                    : key == "green" ? QPalette::Link
                     : key == "background" ? QPalette::Window : QPalette::WindowText;
                 palette.setColor(role, QColor(match.captured(2)));
             }

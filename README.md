@@ -22,6 +22,8 @@ Undertone starts listening as soon as it opens. Pluck one open string at a time,
 
 A steady note stays quiet after its cue. Pluck again or adjust the pitch to hear another indication. The tuner keeps listening after the finish so you can recheck earlier strings.
 
+The display stays useful after the string fades. The last reading remains on screen, dimmed, until you pluck again. The strobe keeps flowing in the direction to turn, and a short line says what to do next, such as **Tighten, then pluck again**. You can glance up while turning the peg without having to keep the string ringing.
+
 ## The display
 
 The large note and segmented strobe show where the pitch sits. In a narrow window, the string targets move below the meter.
@@ -37,7 +39,11 @@ The large note and segmented strobe show where the pitch sits. In a narrow windo
 
 ## Omarchy theme integration
 
-On Omarchy, Undertone follows the active theme’s background, foreground, and accent colors. Change your desktop theme while the tuner is open and the interface updates automatically. On other Linux desktops, Undertone uses the palette shown in the screenshots. [Omarchy](https://omarchy.org/)
+Undertone is built for [Omarchy](https://omarchy.org/) and feels native there. It reads the active theme’s background, foreground, accent, and green. The meter, note, and string list take on the accent color, and the in-tune state uses the theme’s own green. Switch themes while the tuner is open and the interface updates within a second. Light themes keep a dark meter screen so the strobe stays readable.
+
+![Undertone in the Tokyo Night, Catppuccin Latte, Everforest, and Matte Black themes](docs/screenshots/themes.png)
+
+On Omarchy, `./bin/install` also adds a music-note launcher to the right side of the bar. Undertone appears in the app launcher as well. On other Linux desktops, Undertone uses the Gruvbox-style palette shown at the top of this page, and the installer skips the bar widget.
 
 ## Build and run
 
@@ -50,7 +56,7 @@ cd undertone
 ./build/undertone
 ```
 
-Run `./bin/install` to add Undertone to your desktop launcher. The executable lands in `~/.local/bin`, which should be on your `PATH`. Use `./build/undertone --audio-check` to check the speaker and microphone from the terminal.
+Run `./bin/install` to add Undertone to your desktop launcher and, on Omarchy, to the bar. The executable lands in `~/.local/bin`, which should be on your `PATH`. Use `./build/undertone --audio-check` to check the speaker and microphone from the terminal.
 
 <details>
 <summary>Keyboard shortcuts</summary>
