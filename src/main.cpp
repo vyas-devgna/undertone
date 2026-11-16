@@ -1,6 +1,8 @@
 #include "tuner.h"
 
 #include <QColor>
+#include <QDir>
+#include <QFile>
 #include <QFontDatabase>
 #include <QGuiApplication>
 #include <QLockFile>
@@ -8,8 +10,47 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
+#include <QRegularExpression>
 #include <QStandardPaths>
 #include <QTextStream>
+
+static void followOmarchyTheme(QTimer &poll) {
+    QPalette fallback;
+    fallback.setColor(QPalette::Accent, QColor("#7daea3"));
+    fallback.setColor(QPalette::Window, QColor("#282828"));
+    fallback.setColor(QPalette::WindowText, QColor("#d4be98"));
+    QGuiApplication::setPalette(fallback);
+
+    const auto state = qEnvironmentVariableIsEmpty("XDG_STATE_HOME")
+        ? QDir::homePath() + "/.local/state" : qEnvironmentVariable("XDG_STATE_HOME");
+    const auto omarchy = state + "/omarchy";
+    if (!QDir(omarchy).exists())
+        return;
+
+    const auto reload = [fallback, path = omarchy + "/current/theme/colors.toml"] {
+        QPalette palette = fallback;
+        QFile file(path);
+        if (file.open(QIODevice::ReadOnly)) {
+            static const QRegularExpression color(
+                R"re(^\s*(accent|background|foreground)\s*=\s*"(#[0-9a-fA-F]{6})")re",
+                QRegularExpression::MultilineOption);
+            auto values = color.globalMatch(QString::fromUtf8(file.read(8192)));
+            while (values.hasNext()) {
+                const auto match = values.next();
+                const auto key = match.captured(1);
+                const auto role = key == "accent" ? QPalette::Accent
+                    : key == "background" ? QPalette::Window : QPalette::WindowText;
+                palette.setColor(role, QColor(match.captured(2)));
+            }
+        }
+        if (palette != QGuiApplication::palette())
+            QGuiApplication::setPalette(palette);
+    };
+    // The active theme can be replaced by swapping its symlink.
+    reload();
+    QObject::connect(&poll, &QTimer::timeout, &poll, reload);
+    poll.start(1000);
+}
 
 int main(int argc, char **argv) {
     const bool check = argc == 2 && QByteArray(argv[1]) == "--audio-check";
@@ -45,11 +86,8 @@ int main(int argc, char **argv) {
         : QFontDatabase::systemFont(QFontDatabase::FixedFont).family();
     engine.rootContext()->setContextProperty("monoFont", monoFont);
 
-    QPalette palette;
-    palette.setColor(QPalette::Accent, QColor("#7daea3"));
-    palette.setColor(QPalette::Window, QColor("#282828"));
-    palette.setColor(QPalette::WindowText, QColor("#d4be98"));
-    QGuiApplication::setPalette(palette);
+    QTimer themePoll;
+    followOmarchyTheme(themePoll);
 
     engine.load(QUrl("qrc:/Main.qml"));
     if (engine.rootObjects().isEmpty())

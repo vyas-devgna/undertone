@@ -4,7 +4,7 @@
   <p><strong>Hands-free acoustic guitar tuning for Linux</strong></p>
   <p>Open it, pluck any string, and follow the sound.</p>
   <a href="https://github.com/vyas-devgna/undertone/actions/workflows/test.yml"><img src="https://github.com/vyas-devgna/undertone/actions/workflows/test.yml/badge.svg" alt="Rust tests"></a>
-  <p><a href="#tune-by-ear">Tune by ear</a> · <a href="#build-and-run">Build and run</a> · <a href="#inspirations">Inspirations</a></p>
+  <p><a href="#tune-by-ear">Tune by ear</a> · <a href="#omarchy-theme-integration">Omarchy themes</a> · <a href="#build-and-run">Build and run</a> · <a href="#inspirations">Inspirations</a></p>
 </div>
 
 ![Undertone fullscreen with a flat G3, a segmented strobe meter, and six selectable string targets](docs/screenshots/fullscreen.png)
@@ -34,6 +34,10 @@ The large note and segmented strobe show where the pitch sits. In a narrow windo
 - **Chromatic** follows the nearest semitone for fretted notes or custom tunings.
 - **Presets** include Standard, Drop D, DADGAD, Open D, Open G, and E♭ standard. A4 is adjustable from 415–466 Hz.
 - **Reference tones and speaker check** let you hear a target and verify the speaker and microphone. Settings let you select the microphone or turn off cues and motion.
+
+## Omarchy theme integration
+
+On Omarchy, Undertone follows the active theme’s background, foreground, and accent colors. Change your desktop theme while the tuner is open and the interface updates automatically. On other Linux desktops, Undertone uses the palette shown in the screenshots. [Omarchy](https://omarchy.org/)
 
 ## Build and run
 
