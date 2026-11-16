@@ -22,11 +22,11 @@ Undertone starts listening as soon as it opens. Pluck one open string at a time,
 
 A steady note stays quiet after its cue. Pluck again or adjust the pitch to hear another indication. The tuner keeps listening after the finish so you can recheck earlier strings.
 
-The display stays useful after the string fades. The last reading remains on screen, dimmed, until you pluck again. The strobe keeps flowing in the direction to turn, and a short line says what to do next, such as **Tighten, then pluck again**. You can glance up while turning the peg without having to keep the string ringing.
+The display stays useful after the string fades. The last reading remains on screen, dimmed, until you pluck again. The strobe dial keeps turning in the direction you need to turn the peg, and a short line says what to do next, such as **Tighten, then pluck again**. You can glance up while turning the peg without having to keep the string ringing.
 
 ## The display
 
-The large note and segmented strobe show where the pitch sits. In a narrow window, the string targets move below the meter.
+The note sits inside a strobe dial. Its rings spin clockwise when the string is sharp and counterclockwise when it is flat, faster the further off it is, and they stand still and turn green when it is in tune. A cents scale underneath gives the exact reading. In a narrow window, the string targets move below the meter.
 
 <p align="center">
   <img src="docs/screenshots/compact.png" alt="Undertone in a narrow window with the tuning meter above a two-column string list" width="350">

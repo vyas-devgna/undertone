@@ -11,7 +11,8 @@ BarWidget {
 
     Translations { id: strings; directory: Qt.resolvedUrl("i18n") }
 
-    function open() { Quickshell.execDetached(["gtk-launch", "undertone"]) }
+    // Focus a running tuner instead of launching a second one that exits on the instance lock.
+    function open() { Quickshell.execDetached(["omarchy-launch-or-focus", "undertone", "gtk-launch undertone"]) }
 
     ShellIpc {
         target: root.moduleName

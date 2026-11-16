@@ -17,7 +17,8 @@ Item {
         NumberAnimation { duration: 215; easing.type: Easing.OutCubic }
     }
     property real amount: hasPitch ? Math.max(-50, Math.min(50, tuner.cents)) : 0
-    property real phase: 0
+    // Strobe dial angle in degrees; 360 is a whole number of segments on every ring, so wrapping never jumps.
+    property real turn: 0
     // While a reading is held, the needle breathes so it reads as the last pluck, not a live one.
     property real pulse: 1
     SequentialAnimation on pulse {
@@ -33,27 +34,65 @@ Item {
         NumberAnimation { duration: 85; easing.type: Easing.OutCubic }
     }
 
-    onAmountChanged: scale.requestPaint()
-    onHasPitchChanged: scale.requestPaint()
-    onSignalChanged: scale.requestPaint()
-    onPhaseChanged: scale.requestPaint()
-    onPulseChanged: scale.requestPaint()
-    onSettledChanged: scale.requestPaint()
     onDisplayedNoteChanged: if (meter.motion && displayedNote.length) noteEntrance.restart()
-
-    Connections {
-        target: window
-        function onScreenLineChanged() { scale.requestPaint() }
-    }
 
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
 
-        Item { Layout.fillHeight: true; Layout.minimumHeight: 4 }
+        Item { Layout.preferredHeight: window.compact ? 4 : 10 }
         Item {
             Layout.fillWidth: true
-            Layout.preferredHeight: window.compact ? 112 : Math.min(238, meter.height * .50)
+            Layout.fillHeight: true
+            Layout.minimumHeight: window.compact ? 112 : 220
+
+            // Strobe dial: rings spin toward sharp (clockwise) or flat, faster the further off,
+            // and stand still in tune. Static segments; only three rotations change per frame.
+            Item {
+                id: dial
+                anchors.centerIn: parent
+                width: Math.min(parent.width, parent.height) * .98
+                height: width
+                opacity: !meter.hasPitch ? .14 : tuner.held ? .5 : .55 + .45 * tuner.level
+                scale: 1 + .03 * meter.settled
+                Behavior on opacity {
+                    enabled: meter.motion
+                    NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+                }
+                Repeater {
+                    model: [
+                        { count: 72, radius: .5, depth: .06, speed: 1, alpha: 1 },
+                        { count: 48, radius: .43, depth: .045, speed: .75, alpha: .62 },
+                        { count: 36, radius: .375, depth: .032, speed: .5, alpha: .38 }
+                    ]
+                    Item {
+                        id: ring
+                        required property var modelData
+                        anchors.fill: parent
+                        rotation: meter.turn * modelData.speed
+                        opacity: modelData.alpha
+                        Repeater {
+                            model: ring.modelData.count
+                            Rectangle {
+                                id: segment
+                                required property int index
+                                readonly property real orbit: dial.width * ring.modelData.radius
+                                width: Math.max(2, 2.4 * orbit / ring.modelData.count)
+                                height: dial.width * ring.modelData.depth
+                                radius: width / 2
+                                x: dial.width / 2 - width / 2
+                                y: dial.width / 2 - orbit
+                                color: meter.hasPitch ? meter.signal : window.screenLineStrong
+                                transform: Rotation {
+                                    origin.x: segment.width / 2
+                                    origin.y: segment.orbit
+                                    angle: segment.index * 360 / ring.modelData.count
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             Item {
                 anchors.fill: parent
@@ -83,8 +122,7 @@ Item {
                     color: meter.hasPitch ? meter.signal : window.screenInk
                     font.family: monoFont
                     font.weight: Font.DemiBold
-                    font.pixelSize: window.compact ? 92
-                        : Math.round(Math.max(112, Math.min(202, meter.height * .34)))
+                    font.pixelSize: Math.round(Math.min(window.compact ? 92 : 202, dial.width * .34))
                     font.letterSpacing: -4
                 }
                 Text {
@@ -141,7 +179,7 @@ Item {
         Item {
             Layout.alignment: Qt.AlignHCenter
             Layout.fillWidth: true
-            Layout.preferredHeight: window.compact ? 76 : 104
+            Layout.preferredHeight: window.compact ? 64 : 84
 
             Repeater {
                 model: ["−50", "−25", "0", "+25", "+50"]
@@ -157,39 +195,43 @@ Item {
                 }
             }
 
-            Canvas {
-                id: scale
+            // Scene-graph segments: only the strobing ones rebind per frame, nothing is rasterized in software.
+            Item {
+                id: strip
                 anchors.fill: parent
                 anchors.topMargin: 21
                 anchors.bottomMargin: 20
-                onWidthChanged: requestPaint()
-                onHeightChanged: requestPaint()
-                onPaint: {
-                    const ctx = getContext("2d")
-                    ctx.reset()
-                    const count = 45
-                    const step = width / count
-                    const center = (count - 1) / 2
-                    const active = center + center * meter.amount / 50
-                    for (let i = 0; i < count; ++i) {
-                        const delta = i - center
-                        const emphasized = i === 0 || i === count - 1 || delta % 11 === 0
-                        const inRange = meter.hasPitch && i >= Math.min(center, active) && i <= Math.max(center, active)
-                        const stripe = .48 + .32 * Math.cos(delta * .94 - meter.phase)
-                        ctx.fillStyle = inRange ? window.alpha(meter.signal, Math.abs(delta) <= 1 ? .84 : stripe)
-                                                : emphasized ? window.screenLineStrong : window.screenLine
-                        const y = emphasized ? 2 : height * .19
-                        if (meter.hasPitch && meter.settled > 0 && Math.abs(delta) <= 2) {
-                            ctx.fillStyle = window.alpha(meter.signal, meter.settled * (delta === 0 ? .92 : .31))
-                        }
-                        ctx.fillRect(Math.round(i * step), Math.round(y), Math.max(2, Math.floor(step - 3)), Math.floor(height - y * 2))
-                    }
-                    if (meter.hasPitch) {
-                        const x = Math.min(width - 3, (active + .5) * step - 1)
-                        ctx.fillStyle = window.alpha(meter.signal, tuner.held ? meter.pulse : 1)
-                        ctx.fillRect(Math.round(x), 0, 2, height)
+                readonly property real step: width / 45
+                readonly property real active: 22 + 22 * meter.amount / 50
+                Repeater {
+                    model: 45
+                    Rectangle {
+                        required property int index
+                        readonly property int delta: index - 22
+                        readonly property bool emphasized: index === 0 || index === 44 || delta % 11 === 0
+                        readonly property bool inRange: meter.hasPitch
+                            && index >= Math.min(22, strip.active) && index <= Math.max(22, strip.active)
+                        readonly property real inset: emphasized ? 2 : strip.height * .19
+                        x: Math.round(index * strip.step)
+                        y: Math.round(inset)
+                        width: Math.max(2, Math.floor(strip.step - 3))
+                        height: Math.floor(strip.height - inset * 2)
+                        color: meter.hasPitch && meter.settled > 0 && Math.abs(delta) <= 2
+                            ? window.alpha(meter.signal, meter.settled * (delta === 0 ? .92 : .31))
+                            : inRange ? window.alpha(meter.signal, Math.abs(delta) <= 1 ? .84 : .58)
+                            : emphasized ? window.screenLineStrong : window.screenLine
                     }
                 }
+            }
+            // The needle pulses on its own so held readings stay cheap.
+            Rectangle {
+                visible: meter.hasPitch
+                y: strip.y
+                width: 2
+                height: strip.height
+                x: Math.round(Math.min(strip.width - 3, (22 + 22 * meter.amount / 50 + .5) * strip.width / 45 - 1))
+                color: meter.signal
+                opacity: tuner.held ? meter.pulse : 1
             }
 
             Text {
@@ -231,11 +273,14 @@ Item {
                 font.pixelSize: window.compact ? 13 : 15
             }
         }
-        Item { Layout.fillHeight: true; Layout.minimumHeight: 4 }
+        Item { Layout.preferredHeight: window.compact ? 4 : 10 }
     }
 
-    FrameAnimation {
+    // Spin the dial at ~60 updates a second; high-refresh displays gain nothing visible.
+    Timer {
+        interval: 16
+        repeat: true
         running: meter.visible && meter.motion && meter.hasPitch && !tuner.inTune && Math.abs(meter.amount) > .2
-        onTriggered: meter.phase = (meter.phase + Math.min(.05, frameTime) * meter.amount * .54) % (2 * Math.PI)
+        onTriggered: meter.turn = (meter.turn + .016 * meter.amount * 3.6) % 360
     }
 }
