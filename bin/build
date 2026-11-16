@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
+export CARGO_TARGET_DIR="$PWD/build/rust"
+cargo build --release --locked
+cd build
+qmake6 ../undertone.pro
+make -j "${BUILD_JOBS:-4}"

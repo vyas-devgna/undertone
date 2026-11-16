@@ -1,0 +1,16 @@
+[package]
+name = "undertone-core"
+version = "1.1.0"
+edition = "2024"
+rust-version = "1.85"
+publish = false
+
+[lib]
+path = "core/lib.rs"
+crate-type = ["rlib", "staticlib"]
+
+[dependencies]
+cxx = "1.0"
+
+[build-dependencies]
+cxx-build = "1.0"

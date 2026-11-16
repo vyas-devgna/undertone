@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Undertone
+GenericName=Acoustic Guitar Tuner
+Comment=Tune an acoustic guitar by microphone or speaker reference
+Exec=undertone
+Icon=undertone
+Type=Application
+Terminal=false
+Categories=AudioVideo;Audio;
+Keywords=guitar;tuner;pitch;strobe;music;
+StartupWMClass=undertone

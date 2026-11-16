@@ -1,0 +1,8 @@
+<RCC>
+  <qresource prefix="/">
+    <file>Main.qml</file>
+    <file>Meter.qml</file>
+    <file>TunerButton.qml</file>
+    <file>Caption.qml</file>
+  </qresource>
+</RCC>

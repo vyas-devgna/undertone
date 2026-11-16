@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
+bin/build
+
+data_dir="${XDG_DATA_HOME:-$HOME/.local/share}"
+install -Dm755 build/undertone "$HOME/.local/bin/undertone"
+install -Dm644 undertone.desktop "$data_dir/applications/undertone.desktop"
+install -Dm644 undertone.svg "$data_dir/icons/hicolor/scalable/apps/undertone.svg"
